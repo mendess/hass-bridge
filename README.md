@@ -9,6 +9,7 @@ host system.
 
 ```sh
 cargo install --git https://github.com/mendess/hass-bridge.git
+sudo install ${CARGO_HOME:-$HOME/.cargo}/bin/hass-bridge /usr/local/bin
 ```
 
 ### 2. Create a service file
@@ -18,20 +19,21 @@ Description=Shell bridge for home assistant
 After=network.target
 
 [Service]
-ExecStart=/bin/bash -l -c 'exec ${CARGO_HOME:-$HOME/.cargo}/bin/hass-bridge'
+Environment="UID=1000"
+ExecStart=/usr/local/bin/hass-bridge
 Restart=always
 RestartSec=3
 
 [Install]
 WantedBy=default.target
 ```
-to `/usr/lib/systemd/user/hass-bridge.service`
+to `/usr/lib/systemd/system/hass-bridge.service`
 
 ### 3. Enable the service
 
 ```sh
-systemctl --user daemon-reload
-systemctl --user enable hass-bridge
+systemctl daemon-reload
+systemctl enable hass-bridge
 ```
 
 ### 4. Add to home assistant

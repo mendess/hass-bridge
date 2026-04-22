@@ -4,21 +4,14 @@ use std::{
     os::unix::{
         ffi::OsStrExt as _,
         net::{UnixListener, UnixStream},
+        process::CommandExt,
     },
     path::PathBuf,
     process::Command,
     thread,
 };
 
-unsafe extern "C" {
-    fn geteuid() -> std::ffi::c_int;
-}
-
-fn uid() -> u32 {
-    unsafe { geteuid() }.try_into().unwrap()
-}
-
-fn handle_connection(conn: UnixStream) {
+fn handle_connection(conn: UnixStream, uid: u32) {
     let mut buf = BufReader::new(conn);
     loop {
         let buf_len = buf.buffer().len();
@@ -48,6 +41,7 @@ fn handle_connection(conn: UnixStream) {
         let program = cmd.next().unwrap();
         let mut command = Command::new(program);
         command.args(cmd);
+        command.uid(uid);
         println!("running: {} {:?}", program.display(), command.get_args());
         command.output()
     };
@@ -75,19 +69,21 @@ fn handle_connection(conn: UnixStream) {
 }
 
 fn main() -> anyhow::Result<()> {
-    let mut socket_path = PathBuf::from(
-        std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| format!("/run/user/{}", uid())),
-    );
-    socket_path.push("hass-bridge");
+    let mut socket_path = PathBuf::from("/var/lib/hass-bridge");
     std::fs::create_dir_all(&socket_path)
         .with_context(|| format!("failed to create dir {}", socket_path.display()))?;
     socket_path.push("socket");
     let _ = std::fs::remove_file(&socket_path);
     let socket = UnixListener::bind(&socket_path)
         .with_context(|| format!("binding socket {}", socket_path.display()))?;
+
+    let uid = std::env::var("UID")
+        .ok()
+        .and_then(|i| i.parse().ok())
+        .unwrap_or(1000);
     for conn in socket.incoming() {
         let conn = conn.context("failed to accept connection")?;
-        thread::spawn(move || handle_connection(conn));
+        thread::spawn(move || handle_connection(conn, uid));
     }
 
     Ok(())
