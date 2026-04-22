@@ -1,3 +1,4 @@
+use anyhow::Context;
 use std::{
     io::{BufRead as _, BufReader, Write},
     os::unix::{
@@ -73,17 +74,19 @@ fn handle_connection(conn: UnixStream) {
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> anyhow::Result<()> {
     let mut socket_path = PathBuf::from(
         std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| format!("/run/user/{}", uid())),
     );
     socket_path.push("hass-bridge");
-    std::fs::create_dir_all(&socket_path)?;
+    std::fs::create_dir_all(&socket_path)
+        .with_context(|| format!("failed to create dir {}", socket_path.display()))?;
     socket_path.push("socket");
     let _ = std::fs::remove_file(&socket_path);
-    let socket = UnixListener::bind(socket_path)?;
+    let socket = UnixListener::bind(&socket_path)
+        .with_context(|| format!("binding socket {}", socket_path.display()))?;
     for conn in socket.incoming() {
-        let conn = conn?;
+        let conn = conn.context("failed to accept connection")?;
         thread::spawn(move || handle_connection(conn));
     }
 
