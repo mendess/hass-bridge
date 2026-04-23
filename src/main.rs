@@ -41,6 +41,7 @@ fn handle_connection(conn: UnixStream) {
         command.output()
     };
     let mut conn = buf.into_inner();
+    let escape = |s: &str| s.replace("\n", r#"\n"#).replace("\"", r#"\""#);
     let reply = match output {
         Ok(output) => {
             let code = output
@@ -48,14 +49,16 @@ fn handle_connection(conn: UnixStream) {
                 .code()
                 .map(|c| c.to_string())
                 .unwrap_or_else(|| String::from("null"));
-            let escape = |s: &str| s.replace("\n", r#"\n"#).replace("\"", r#"\""#);
             format!(
                 r#"{{"status": "success", "exit": {code}, "stdout": "{}", "stderr": "{}"}}"#,
                 escape(&String::from_utf8_lossy(&output.stdout)),
                 escape(&String::from_utf8_lossy(&output.stderr)),
             )
         }
-        Err(e) => format!(r#"{{"status":"failure": "error": {e}}}"#),
+        Err(e) => format!(
+            r#"{{"status":"failure", "error": "{}"}}"#,
+            escape(&e.to_string())
+        ),
     };
     println!("replying: {reply}");
     if let Err(e) = conn.write_all(reply.as_bytes()) {
