@@ -50,13 +50,13 @@ fn handle_connection(conn: UnixStream) {
                 .map(|c| c.to_string())
                 .unwrap_or_else(|| String::from("null"));
             format!(
-                r#"{{"status": "success", "exit": {code}, "stdout": "{}", "stderr": "{}"}}"#,
+                r#"{{"status":"success","exit":{code},"stdout":"{}","stderr":"{}"}}"#,
                 escape(&String::from_utf8_lossy(&output.stdout)),
                 escape(&String::from_utf8_lossy(&output.stderr)),
             )
         }
         Err(e) => format!(
-            r#"{{"status":"failure", "error": "{}"}}"#,
+            r#"{{"status":"failure","error":"{}"}}"#,
             escape(&e.to_string())
         ),
     };
