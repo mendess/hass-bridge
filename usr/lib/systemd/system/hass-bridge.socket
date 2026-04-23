@@ -1,0 +1,8 @@
+[Socket]
+ListenStream=/var/lib/hass-bridge/socket
+SocketUser=<your-user>
+SocketGroup=<your-user>
+SocketMode=0660
+
+[Install]
+WantedBy=sockets.target

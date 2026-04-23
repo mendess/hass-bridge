@@ -1,0 +1,13 @@
+[Unit]
+Description=Shell bridge for home assistant
+After=network.target
+
+[Service]
+User=<your-user>
+Group=<your-user>
+ExecStart=/usr/local/bin/hass-bridge
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
